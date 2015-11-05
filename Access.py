@@ -1,22 +1,23 @@
-import requests
 import time
+import requests
 import os
 from bs4 import BeautifulSoup
 import ast
 import re
-from datetime import datetime
-
-class Timer(object):
-    def __init__(self,interval):
-        self.interval = interval
+from Tkinter import *
+import tkMessageBox
+root = Tk()
+root.geometry("400x200+0+0")
+root.title('MHS Color Printing')
+can_notify = False
+class Sheets(object):
+    def __init__(self):
         
         self.url = 'https://docs.google.com/spreadsheets/d/18py6NHCJipTqDTw2xncXgbUWlbQyK6rGmJFM6FHnG8I/edit?pli=1#gid=1279292193'
         
         self.user = 'icadetprintscraper@gmail.com'
         self.passw = 'iCadet_Print_Scraper'
-        self.filename = 'raw_data.txt'
         
-        print self.update_page() #change to update() later 
     def update_page(self):
         page = requests.get(self.url,auth=(self.user,self.passw))
         data = page.content
@@ -52,7 +53,7 @@ class Timer(object):
         
         
         
-        time = datetime.utcnow()
+        mytime = time.strftime('%l:%M%p on %b %d, %Y')
         comments = result[-6]
         email = result[-7]
         delivery = result[-8]
@@ -61,34 +62,65 @@ class Timer(object):
         description = result[-11]
         name = result[-12]
                 
-        info = "%s (%s) printed  '%s' from %s at %s. It consists of %s pages. %s. Comments: %s. " % (name,email,description,building,time,int(pages),delivery,comments)
-        
-        
-        
-            
-        return info
-            
-        
-            
-            
- 
-    def update(self):
-        new_text = self.update_page()
-        
-        with open('parsed.txt','r') as parseddoc:
-            old_text = parseddoc.readline()
-        
-        if str(old_text) != str(new_text):
-            print new_text, old_text
-            
-        with open('parsed.txt','w') as parseddoc:
-            parseddoc.write(new_text)
-        
+        return [name,building,delivery]
         
     
         
+
+sheet = Sheets()
+class Window(object):
+    def __init__(self,interval):
+        self.interval = interval
+        self.last_update = Label(root,text="LAST UPDATE: %s" % time.strftime('%l:%M%p on %b %d, %Y'))
+        self.last_update.pack()
+        self.update()
+    def update(self):
+         
+        self.last_update.destroy()
+        self.last_update = Label(root,text="LAST UPDATE: %s" % time.strftime('%l:%M%p on %b %d, %Y'))
+        self.last_update.pack()
+        
+        info = sheet.update_page()
+        
+        
+        #info 0-7
+        
+
+        
+        ### decide whether or not to play the image
+        
+        with open('new.txt','w') as new:
+            new.write(str(info[0::7]))
+        with open('old.txt','r') as old:
+            old_info = old.readline()
+        with open('new.txt','r') as new:
+            new_info = new.readline()
+        with open('old.txt','w') as old:
+            old.write(str(info[0::7]))
+            
         
         
         
-timer = Timer(interval=30)
+        if old_info != new_info and can_notify:
+            self.notify(info=info)
+        
+        
+        
+        root.after(self.interval,self.update)
+    def notify(self,info):
+        tkMessageBox.showinfo("New Print Request!", """Name:%s\nBuilding:%s\nDelivery:%s""" % (info[0],info[1],info[2]))
+        root.update()
+        
+       
+  
+        
+    
+window = Window(interval=60000)
+#interval is in milliseconds
+can_notify = True
+
+root.mainloop()
+
+
+
         
